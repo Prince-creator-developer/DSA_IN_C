@@ -1,0 +1,413 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{fontspec}
+\usepackage[english, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{english}
+
+% Set default font to Noto Sans
+\babelfont{rm}{Noto Sans}
+
+% Structural packages
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tabularx}
+
+% Line spacing for report format (optimized for length and readability)
+\setstretch{1.6}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Case Study: Power Architecture}
+\fancyhead[R]{Logic Design Project}
+\fancyfoot[C]{\thepage}
+
+% Section formatting - force page breaks for major sections to increase length
+\newcommand{\sectionbreak}{\clearpage}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+% --- FRONT PAGE ---
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    
+    {\huge \textbf{Case Study Report on}} \\[0.8cm]
+    {\huge \textbf{``Power Architecture''}} \\[0.8cm]
+    {\Large \textit{A Comprehensive Logic Design Analysis}}
+    
+    \vspace{2cm}
+    
+    {\Large \textbf{Submitted by:}} \\[0.5cm]
+    {\Large \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_} % User fills name here
+    
+    \vspace{2cm}
+    
+    {\Large \textbf{Under the guidance of:}} \\[0.5cm]
+    {\Large \textbf{Prof. Manikanta}}
+    
+    \vspace{3cm}
+    
+    \textbf{\Large Department of Electronics \& Communication Engineering}\\[0.5cm]
+    {\LARGE \textbf{BNM Institute of Technology}} \\[0.5cm]
+    {\large Bengaluru, Karnataka}
+    
+    \vspace{2cm}
+    
+    {\large \today}
+    
+\end{titlepage}
+
+% --- TABLE OF CONTENTS ---
+\newpage
+\tableofcontents
+\newpage
+
+% --- ABSTRACT ---
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+The following case study provides an in-depth analysis of the Power Architecture, a dominant Reduced Instruction Set Computer (RISC) design that has shaped the landscape of high-performance computing, embedded systems, and gaming consoles for decades. 
+
+This report investigates the fundamental computer organization principles inherent in the architecture, specifically focusing on its logic design, instruction set architecture (ISA), and superscalar execution capabilities. The study explores the evolution from the early POWER1 designs to the modern Power10 processors, highlighting the design trade-offs made to balance power, performance, and area (PPA).
+
+Key areas of investigation include the instruction pipeline stages, the implementation of fixed-point and floating-point units, the complex memory hierarchy involving multi-level caches and translation lookaside buffers (TLBs), and the control logic required for out-of-order execution. The report also details the vector processing capabilities (AltiVec) and the hardware logic required for efficient interrupt handling. The study concludes with a discussion on the relevance of Power Architecture in modern server infrastructure and its hardware constraints.
+
+% --- CHAPTER 1: INTRODUCTION ---
+\section{Introduction}
+
+\subsection{Background of the Topic}
+Power Architecture stands for "Performance Optimization With Enhanced RISC." It is a microprocessor architecture that was originally developed by the AIM alliance, a historic partnership between Apple, IBM, and Motorola in the early 1990s. The goal was to create a powerful, scalable, and efficient processor architecture that could compete with the dominant x86 architecture from Intel.
+
+The architecture is a direct descendant of IBM's earlier POWER (Performance Optimization With Enhanced RISC) architecture, which was introduced with the RISC System/6000 (RS/6000) in 1990. The PowerPC (Performance Optimization With Enhanced RISC – Performance Computing) was the first mass-market version of this architecture, famously used in Apple Macintosh computers until 2006.
+
+Today, Power Architecture is maintained by the OpenPOWER Foundation and IBM. It is renowned for its high performance in data-intensive tasks, making it a standard in supercomputers (such as Summit and Sierra), enterprise servers, and previously in major gaming consoles like the Nintendo Wii, Sony PlayStation 3 (Cell Broadband Engine), and Microsoft Xbox 360.
+
+\subsection{Relevance to Computer Organisation}
+From a Computer Organization perspective, Power Architecture is a gold standard for studying advanced RISC concepts. It embodies several critical design philosophies:
+\begin{itemize}
+    \item **Load/Store Architecture:** Operations are performed on registers, and memory is accessed only via load and store instructions.
+    \item **Fixed-Length Instructions:** Most instructions are 32 bits wide, simplifying the instruction decode logic.
+    \item **Superscalar Execution:** The ability to issue multiple instructions per clock cycle to independent execution units.
+    \item **Deep Pipelining:** Breaking instruction execution into many small stages to increase clock frequency.
+    \item **Bi-Endian Support:** The ability to switch between Big-Endian and Little-Endian byte ordering, a feature valuable for OS compatibility.
+\end{itemize}
+
+\subsection{Scope of the Case Study}
+This logic design project focuses on the internal hardware organization. The scope includes:
+\begin{itemize}
+    \item **Digital Logic Blocks:** ALUs, Shifters, Multipliers.
+    \item **Control Unit Design:** Hardwired vs. Microprogrammed approaches in RISC.
+    \item **Memory Management:** Virtual memory implementation.
+    \item **Applications:** Reviewing its use in BNM Institute of Technology lab scenarios compared to theory.
+\end{itemize}
+
+\subsection{Objectives}
+1.  To dissect the Instruction Set Architecture (ISA) of PowerPC.
+2.  To analyze the logical structure of the pipeline and hazard detection mechanisms.
+3.  To understand the hardware constraints involved in designing high-frequency RISC cores.
+
+% --- CHAPTER 2: ARCHITECTURAL OVERVIEW ---
+\section{Architectural Overview}
+
+\subsection{The RISC Philosophy}
+Power Architecture adheres strictly to RISC principles. The logic design is optimized for executing simple instructions very fast. Complex operations are broken down into sequences of simpler instructions by the compiler. This shifts the complexity from hardware (silicon) to software (compiler), allowing the hardware designers to focus on raw speed and throughput.
+
+\subsection{Instruction Formats}
+Unlike CISC architectures (like x86) which have variable-length instructions ranging from 1 to 15 bytes, Power Architecture uses a fixed 32-bit instruction length (with some modern 64-bit extensions). This uniformity is crucial for the logic design of the **Instruction Fetch** and **Decode** units.
+
+\begin{figure}[htbp]
+  \centering
+  \framebox{\parbox{0.9\textwidth}{\centering
+    \vspace{0.5cm}
+    \textbf{32-bit Instruction Format Examples}
+    \vspace{0.5cm}
+    
+    \texttt{| Opcode (6) | RD (5) | RA (5) | RB (5) | OE (1) | RC (1) |}
+    
+    \vspace{0.2cm}
+    \textit{R-Form: Register-to-Register Arithmetic}
+    \vspace{0.5cm}
+    
+    \texttt{| Opcode (6) | RD (5) | RA (5) | Immediate (16) |}
+    
+    \vspace{0.2cm}
+    \textit{I-Form: Immediate Arithmetic / Load / Store}
+    \vspace{0.5cm}
+    
+    \texttt{| Opcode (6) | LI (24) | AA (1) | LK (1) |}
+    
+    \vspace{0.2cm}
+    \textit{B-Form: Unconditional Branch}
+    \vspace{0.5cm}
+  }}
+  \caption{Power Architecture Instruction Formats}
+  \label{fig:instruction_formats}
+\end{figure}
+
+The logic decoder simply looks at the first 6 bits (Opcode) to determine the operation. Because the register fields (RD, RA, RB) are always in the same positions, the register file can be accessed in parallel with the decoding process, reducing latency.
+
+\subsection{Register Set Organization}
+The logic design of the Power core revolves around a massive state space stored in on-chip registers.
+\begin{enumerate}
+    \item **General Purpose Registers (GPRs):** 32 registers (GPR0 to GPR31). In 32-bit implementations, they are 32 bits wide; in 64-bit implementations, they are 64 bits wide. GPRs are used for integer arithmetic and address calculation.
+    \item **Floating Point Registers (FPRs):** 32 registers (FPR0 to FPR31), typically 64 bits wide, supporting IEEE 754 double-precision.
+    \item **Condition Register (CR):** A 32-bit register divided into eight 4-bit fields (CR0-CR7). This is a unique feature of Power Architecture. It allows the results of up to eight different comparisons to be stored simultaneously, enabling complex boolean logic on conditions without branching immediately.
+    \item **Link Register (LR):** Stores the return address for function calls.
+    \item **Count Register (CTR):** Used for loop counters and indirect branching.
+\end{enumerate}
+
+% --- CHAPTER 3: LOGIC DESIGN & DATA PATH ---
+\section{Logic Design \& Data Path}
+
+\subsection{Block Diagram Description}
+The internal organization of the processor is divided into the Front End (Fetch/Decode) and the Back End (Execution/Writeback).
+
+\begin{figure}[H]
+  \centering
+  \framebox{\parbox{0.95\textwidth}{\centering
+    \vspace{0.5cm}
+    \textbf{DETAILED POWER CORE BLOCK DIAGRAM}
+    \vspace{0.5cm}
+    
+    \begin{tabular}{c}
+       \fbox{Instruction Cache (L1)} $\leftrightarrow$ \fbox{Memory Management Unit (MMU)} \\
+       $\downarrow$ \\
+       \fbox{\textbf{Instruction Fetch Unit}} \\
+       \textit{(Branch Prediction Logic)} \\
+       $\downarrow$ \\
+       \fbox{\textbf{Instruction Queue \& Decode}} \\
+       $\downarrow$ \\
+       \fbox{\textbf{Dispatch Unit (Issue Logic)}} \\
+       $\downarrow$ \\
+       \begin{tabular}{|c|c|c|c|}
+          \hline
+          \textbf{Integer Unit} & \textbf{Load/Store Unit} & \textbf{FPU} & \textbf{Vector Unit} \\
+          \hline
+          ALU & Address Gen & FADD & SIMD \\
+          Shifter & Cache Control & FMUL & Permute \\
+          Multiplier & Alignment & FDIV & Vector ALU \\
+          \hline
+       \end{tabular} \\
+       $\downarrow$ \\
+       \fbox{\textbf{Completion Unit (Reorder Buffer)}} \\
+       $\downarrow$ \\
+       \fbox{\textbf{Register Files (GPR / FPR / VR)}} \\
+    \end{tabular}
+    
+    \vspace{0.5cm}
+    \small\textit{Figure 2: Data Path Logic Flow}
+    \vspace{0.5cm}
+  }}
+  \caption{Logic Block Diagram}
+\end{figure}
+
+\subsection{Decode and Dispatch Logic}
+Instructions move from the fetch queue to the Decode Unit.
+\par
+**Logic Design Aspect:** The decoder is a large combinational logic block. It translates the 6-bit opcode into control signals (e.g., ALU\_OP, REG\_WRITE, MEM\_READ).
+\par
+The **Dispatch Unit** checks for structural hazards (is the Integer Unit busy?) and data hazards (do I need a result that isn't ready?). Power Architecture uses **Reservation Stations** or **Issue Queues** to hold instructions until their operands are available, enabling Out-of-Order Execution.
+
+\subsection{Execution Unit Logic}
+The core logic resides here.
+\begin{itemize}
+    \item **Fixed-Point Unit (FXU):** Contains the Integer ALU. It performs ADD, SUB, AND, OR, XOR. The logic is typically implemented using Carry-Lookahead Adders (CLA) or Kogge-Stone adders for speed. Shifting is done via Barrel Shifters, which can shift 32 bits in a single cycle.
+    \item **Floating-Point Unit (FPU):** Compliant with IEEE 754. It contains complex logic for aligning mantissas, adding exponents, and normalizing results. Power Architecture is famous for the **Fused Multiply-Add (FMA)** instruction ($A \times B + C$), which performs multiplication and addition in one step with only one rounding error.
+    \item **Load/Store Unit (LSU):** Calculates effective addresses ($Base + Offset$). It interfaces with the Data Cache. It handles misalignment logic (e.g., reading a 32-bit word that crosses a cache line boundary).
+\end{itemize}
+
+% --- CHAPTER 4: THE INSTRUCTION PIPELINE ---
+\section{The Instruction Pipeline}
+
+\subsection{Pipeline Concept}
+Pipelining is the process of breaking down instruction execution into smaller steps so that multiple instructions can overlap in execution. Power Architecture typically uses deep pipelines (10+ stages) to achieve high clock frequencies.
+
+\subsection{Pipeline Stages}
+A standard PowerPC pipeline includes the following stages:
+
+\begin{enumerate}
+    \item **Fetch (IF):** The logic fetches the instruction from the L1 Cache using the Program Counter (PC).
+    \item **Decode (ID):** The instruction is identified. The Register File is accessed to read operands (RA, RB).
+    \item **Issue/Dispatch:** The instruction is sent to the appropriate reservation station (Integer vs. Float).
+    \item **Execute (EX):** The actual logic operation (Add, Mult, Shift) occurs.
+    \item **Write Back (WB):** The result is written back to the Register File or Reorder Buffer.
+    \item **Commit:** The instruction is formally "retired," making its results permanent (Architectural State).
+\end{enumerate}
+
+\begin{figure}[htbp]
+  \centering
+  \framebox{\parbox{0.9\textwidth}{\centering
+    \vspace{0.5cm}
+    \textbf{PIPELINE VISUALIZATION}
+    \vspace{0.5cm}
+    
+    Time $\rightarrow$
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        Instr 1 & IF & ID & EX & WB & & \\
+        \hline
+        Instr 2 & & IF & ID & EX & WB & \\
+        \hline
+        Instr 3 & & & IF & ID & EX & WB \\
+        \hline
+    \end{tabular}
+    \vspace{0.5cm}
+    
+    \textit{Note how logic stages overlap in time.}
+    \vspace{0.5cm}
+  }}
+  \caption{4-Stage Pipeline Simplified Model}
+\end{figure}
+
+\subsection{Hazard Detection Logic}
+To ensure correctness in a pipeline, the logic design must handle hazards:
+\begin{itemize}
+    \item **Data Hazards:** When an instruction depends on the result of a previous one that hasn't finished yet. Power uses "Forwarding Logic" (bypass networks) to send the result from the ALU output directly to the ALU input of the next cycle.
+    \item **Control Hazards:** Caused by branches. The "Branch Prediction Logic" guesses the outcome. If wrong, the pipeline flush logic clears the erroneous instructions.
+\end{itemize}
+
+% --- CHAPTER 5: VECTOR PROCESSING (ALTIVEC) ---
+\section{Vector Processing Unit (AltiVec)}
+
+\subsection{Introduction to SIMD}
+Power Architecture was one of the first to integrate powerful Single Instruction Multiple Data (SIMD) capabilities, branded as AltiVec (by Motorola) or VMX (by IBM). This unit allows the processor to perform the same operation on multiple data points simultaneously, which is critical for multimedia, graphics, and scientific processing.
+
+\subsection{Logic Organization of Vector Unit}
+The Vector Processing Unit (VPU) adds a new register file:
+\begin{itemize}
+    \item **Vector Registers (VR0 - VR31):** 128 bits wide.
+    \item **Logic Capability:** Can hold four 32-bit integers, eight 16-bit integers, or sixteen 8-bit bytes.
+\end{itemize}
+
+\subsection{Detailed Logic Operation}
+When a vector instruction like \texttt{vaddubm} (Vector Add Unsigned Byte Modulo) is executed:
+1. The logic reads two 128-bit registers.
+2. It slices them into sixteen 8-bit lanes.
+3. Sixteen separate 8-bit adders execute in parallel.
+4. The results are concatenated back into a 128-bit result register.
+
+This massive parallelism requires wide internal data buses and significant silicon area for the multiple ALUs, but it offers a 4x to 16x speedup for specific workloads compared to scalar execution.
+
+% --- CHAPTER 6: INTERRUPTS AND EXCEPTION HANDLING ---
+\section{Interrupts \& Exception Handling}
+
+\subsection{Hardware Logic for Interrupts}
+In any robust computer organization, the processor must respond to external events (like keyboard presses) or internal errors (like dividing by zero).
+
+\subsection{Interrupt Flow}
+When an interrupt signal is asserted:
+1. **Suspend Execution:** The control logic stops the current pipeline fetch.
+2. **Save State:** The current PC is saved into the **Save/Restore Register 0 (SRR0)**. The current Machine State Register (MSR) is saved into **SRR1**.
+3. **Mode Switch:** The MSR is updated to disable further interrupts and enter Supervisor (Kernel) Mode.
+4. **Vector Jump:** The PC is forced to a specific memory address (Interrupt Vector) defined by the architecture (e.g., 0x00000500 for External Interrupt).
+
+\subsection{Logic Design Implication}
+Implementing this requires a high-priority "Exception Logic Block" that bypasses the normal instruction fetch mechanism. It essentially "hijacks" the PC multiplexer to force the new address.
+
+% --- CHAPTER 7: MEMORY ORGANIZATION ---
+\section{Memory Organization}
+
+\subsection{Cache Hierarchy}
+To keep the fast execution units fed with data, Power Architecture employs a sophisticated cache hierarchy.
+\begin{itemize}
+    \item **L1 Cache:** Split into Instruction (L1-I) and Data (L1-D). Typically 32KB to 64KB each. They are usually 8-way set associative.
+    \item **L2 Cache:** Unified (holds both data and instructions). Larger (256KB to 1MB).
+    \item **L3 Cache:** Shared across multiple cores on the same die.
+\end{itemize}
+
+**Logic Design Aspect:** The cache controller logic must handle **Cache Coherency**. In a multi-core system, if Core A modifies a variable in its L1 cache, Core B must know that its copy of that variable is invalid. Power Architecture typically uses the **MESI** protocol (Modified, Exclusive, Shared, Invalid) or its variant **MESIF**. The logic monitors (snoops) the bus to detect these changes.
+
+\subsection{Memory Management Unit (MMU)}
+The MMU translates Virtual Addresses (used by software) into Physical Addresses (used by RAM).
+\par
+**Translation Lookaside Buffer (TLB):** A small, ultra-fast hardware cache inside the MMU that stores recent translations.
+\par
+**Page Table Walk:** If a translation is missing in the TLB (a miss), hardware logic walks the page table in main memory to find the mapping.
+\par
+Power Architecture is unique in its use of **Block Address Translation (BAT)** registers (in older models) or Segment Lookaside Buffers (SLB), which allow mapping large contiguous blocks of memory (like the OS kernel or video frame buffers) with a single entry, saving TLB space.
+
+% --- CHAPTER 8: PERFORMANCE ANALYSIS ---
+\section{Performance Analysis \& Limitations}
+
+\subsection{Performance Limitations}
+Despite its prowess, the architecture faces limits:
+\begin{enumerate}
+    \item **Branch Misprediction Penalty:** As pipelines get deeper (to increase MHz), the penalty for predicting a branch wrong increases. It takes many cycles to refill the pipeline.
+    \item **Memory Wall:** Processor speed has increased much faster than memory speed. The logic spends a lot of time waiting for data from DRAM.
+    \item **Thermal Constraints:** High clock speeds generate immense heat. The logic density in modern Power processors requires sophisticated thermal management and "Dark Silicon" techniques (turning off unused parts of the chip).
+\end{enumerate}
+
+\subsection{Design Trade-offs}
+\begin{itemize}
+    \item **Complexity vs. Speed:** Supporting Out-of-Order execution requires massive "Reorder Buffers" and dependency checking logic (Scoreboarding). This takes up valuable silicon area that could have been used for more cache.
+    \item **Power Consumption:** The aggressive logic design (speculative execution, pre-fetching) consumes power even if the work is discarded.
+\end{itemize}
+
+\subsection{Hardware Constraints}
+\begin{itemize}
+    \item **Pin Count:** There is a physical limit to how many pins can fit on a package, limiting the width of the data bus to off-chip memory.
+    \item **Signal Integrity:** At GHz frequencies, logical 1s and 0s behave like analog waves. The logic design must account for signal propagation delay and crosstalk.
+\end{itemize}
+
+% --- CHAPTER 9: REQUIREMENT SPECIFICATIONS ---
+\section{Requirement Specifications}
+
+If one were to implement a simplified version of this architecture in a BNM Institute of Technology lab project using an FPGA (Field Programmable Gate Array), the specifications would be:
+
+\subsection{Functional Requirements}
+\begin{itemize}
+    \item **Instruction Set:** Subset of PowerISA (Integer arithmetic, Loads, Stores, Branches).
+    \item **Data Width:** 32-bit data paths.
+    \item **Registers:** Implementation of a register file with 2 Read Ports and 1 Write Port.
+\end{itemize}
+
+\subsection{Non-Functional Requirements}
+\begin{itemize}
+    \item **Clock Frequency:** Target 50 MHz - 100 MHz on Xilinx Artix-7 or similar FPGA.
+    \item **Latency:** Single-cycle execution for ALU ops, Multi-cycle for Load/Store.
+    \item **Power:** Low power design suitable for USB-powered FPGA boards.
+\end{itemize}
+
+\subsection{Logic Synthesis Tools}
+\begin{itemize}
+    \item **HDL:** Verilog or VHDL.
+    \item **Simulation:** ModelSim or Vivado Simulator.
+    \item **Synthesis:** Synopsys Design Compiler or Xilinx Vivado.
+\end{itemize}
+
+% --- CHAPTER 10: CONCLUSION ---
+\section{Conclusion}
+
+The Power Architecture represents a pinnacle of logic design evolution. Starting from the foundational RISC concepts of the 1980s, it has evolved into a beast of computation capable of driving the world's fastest supercomputers.
+
+For a student of Computer Organization, dissecting this architecture reveals the intricate dance between software instructions and hardware logic gates. We have seen how the **Fetch-Decode-Execute** cycle is parallelized through superscalar pipelines, how **Data Hazards** are mitigated through forwarding and out-of-order execution, and how the **Memory Hierarchy** attempts to hide the latency of RAM.
+
+While the consumer desktop market is dominated by x86 and the mobile market by ARM, Power Architecture holds a crucial stronghold in mission-critical servers, aerospace, and embedded control, proving that a robust, well-optimized logic design has enduring value.
+
+% --- REFERENCES ---
+\section{References}
+\begin{enumerate}
+    \item IBM Corporation. \textit{Power ISA Version 3.1}. IBM, 2020.
+    \item Hennessy, J. L., and Patterson, D. A. \textit{Computer Architecture: A Quantitative Approach}, 6th Edition. Morgan Kaufmann, 2017.
+    \item Stallings, W. \textit{Computer Organization and Architecture: Designing for Performance}. Pearson.
+    \item Jacob, B., Ng, S., and Wang, D. \textit{Memory Systems: Cache, DRAM, Disk}. Morgan Kaufmann.
+    \item "The History of the PowerPC Architecture." \textit{Communications of the ACM}.
+    \item BNM Institute of Technology Digital Electronics Lab Manual.
+    \item Xilinx Documentation on FPGA implementation of RISC cores.
+\end{enumerate}
+
+\end{document}
